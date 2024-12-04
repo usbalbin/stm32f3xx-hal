@@ -11,7 +11,7 @@ use core::{convert::TryFrom, ops::Deref};
 use crate::{
     gpio::{gpioa, gpiob, OpenDrain, AF4},
     hal::blocking::i2c::{Read, Write, WriteRead},
-    pac::{i2c1::RegisterBlock, rcc::cfgr3::I2C1SW_A, I2C1, RCC},
+    pac::{i2c1::RegisterBlock, rcc::cfgr3::I2C1SW, I2C1, RCC},
     rcc::{self, Clocks},
     time::{
         fixed_point::FixedPoint,
@@ -91,8 +91,8 @@ pub struct I2c<I2C, PINS> {
 macro_rules! busy_wait {
     ($i2c:expr, $flag:ident, $variant:ident) => {
         loop {
-            let isr = $i2c.isr.read();
-            let icr = &$i2c.icr;
+            let isr = $i2c.isr().read();
+            let icr = &$i2c.icr();
 
             if isr.arlo().is_lost() {
                 icr.write(|w| w.arlocf().clear());
@@ -101,7 +101,7 @@ macro_rules! busy_wait {
                 icr.write(|w| w.berrcf().clear());
                 return Err(Error::Bus);
             } else if isr.nackf().is_nack() {
-                while $i2c.isr.read().stopf().is_no_stop() {}
+                while $i2c.isr().read().stopf().is_no_stop() {}
                 icr.write(|w| w.nackcf().clear());
                 icr.write(|w| w.stopcf().clear());
                 return Err(Error::Nack);
@@ -190,21 +190,23 @@ impl<I2C, SCL, SDA> I2c<I2C, (SCL, SDA)> {
 
         // Configure for "fast mode" (400 KHz)
         // NOTE(write): writes all non-reserved bits.
-        i2c.timingr.write(|w| {
-            w.presc()
-                .bits(crate::unwrap!(u8::try_from(presc)))
-                .sdadel()
-                .bits(crate::unwrap!(u8::try_from(sdadel)))
-                .scldel()
-                .bits(crate::unwrap!(u8::try_from(scldel)))
-                .scll()
-                .bits(scl_low)
-                .sclh()
-                .bits(scl_high)
-        });
+        unsafe {
+            i2c.timingr().write(|w| {
+                w.presc()
+                    .bits(crate::unwrap!(u8::try_from(presc)))
+                    .sdadel()
+                    .bits(crate::unwrap!(u8::try_from(sdadel)))
+                    .scldel()
+                    .bits(crate::unwrap!(u8::try_from(scldel)))
+                    .scll()
+                    .bits(scl_low)
+                    .sclh()
+                    .bits(scl_high)
+            });
+        }
 
         // Enable the peripheral
-        i2c.cr1.modify(|_, w| w.pe().set_bit());
+        i2c.cr1().modify(|_, w| w.pe().set_bit());
 
         Self { i2c, pins }
     }
@@ -238,7 +240,7 @@ where
         crate::assert!(!buffer.is_empty());
 
         // Detect Bus busy
-        if self.i2c.isr.read().busy().is_busy() {
+        if self.i2c.isr().read().busy().is_busy() {
             return Err(Error::Busy);
         }
 
@@ -247,15 +249,19 @@ where
         // Process 255 bytes at a time
         for (i, buffer) in buffer.chunks_mut(0xFF).enumerate() {
             // Prepare to receive `bytes`
-            self.i2c.cr2.modify(|_, w| {
+            self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    w.sadd()
-                        .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    unsafe {
+                        w.sadd()
+                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    }
                     w.rd_wrn().read();
                     w.start().start();
                 }
-                w.nbytes().bits(crate::unwrap!(u8::try_from(buffer.len())));
+                unsafe {
+                    w.nbytes().bits(crate::unwrap!(u8::try_from(buffer.len())));
+                }
                 if i == end {
                     w.reload().completed().autoend().automatic()
                 } else {
@@ -267,7 +273,7 @@ where
                 // Wait until we have received something
                 busy_wait!(self.i2c, rxne, is_not_empty);
 
-                *byte = self.i2c.rxdr.read().rxdata().bits();
+                *byte = self.i2c.rxdr().read().rxdata().bits();
             }
 
             if i != end {
@@ -280,7 +286,7 @@ where
         // Wait until the last transmission is finished
         busy_wait!(self.i2c, stopf, is_stop);
 
-        self.i2c.icr.write(|w| w.stopcf().clear());
+        self.i2c.icr().write(|w| w.stopcf().clear());
 
         Ok(())
     }
@@ -294,18 +300,22 @@ where
 
     fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
         // Detect Bus busy
-        if self.i2c.isr.read().busy().is_busy() {
+        if self.i2c.isr().read().busy().is_busy() {
             return Err(Error::Busy);
         }
 
         if bytes.is_empty() {
             // 0 byte write
-            self.i2c.cr2.modify(|_, w| {
+            self.i2c.cr2().modify(|_, w| {
                 w.add10().bit7();
-                w.sadd()
-                    .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                unsafe {
+                    w.sadd()
+                        .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                }
                 w.rd_wrn().write();
-                w.nbytes().bits(0);
+                unsafe {
+                    w.nbytes().bits(0);
+                }
                 w.reload().completed();
                 w.autoend().automatic();
                 w.start().start()
@@ -316,15 +326,19 @@ where
             // Process 255 bytes at a time
             for (i, bytes) in bytes.chunks(0xFF).enumerate() {
                 // Prepare to send `bytes`
-                self.i2c.cr2.modify(|_, w| {
+                self.i2c.cr2().modify(|_, w| {
                     if i == 0 {
                         w.add10().bit7();
-                        w.sadd()
-                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                        unsafe {
+                            w.sadd()
+                                .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                        }
                         w.rd_wrn().write();
                         w.start().start();
                     }
-                    w.nbytes().bits(crate::unwrap!(u8::try_from(bytes.len())));
+                    unsafe {
+                        w.nbytes().bits(crate::unwrap!(u8::try_from(bytes.len())));
+                    }
                     if i == end {
                         w.reload().completed().autoend().automatic()
                     } else {
@@ -339,7 +353,9 @@ where
 
                     // Put byte on the wire
                     // NOTE(write): Writes all non-reserved bits.
-                    self.i2c.txdr.write(|w| w.txdata().bits(*byte));
+                    unsafe {
+                        self.i2c.txdr().write(|w| w.txdata().bits(*byte));
+                    }
                 }
 
                 if i != end {
@@ -353,7 +369,7 @@ where
         // Wait until the last transmission is finished
         busy_wait!(self.i2c, stopf, is_stop);
 
-        self.i2c.icr.write(|w| w.stopcf().clear());
+        self.i2c.icr().write(|w| w.stopcf().clear());
 
         Ok(())
     }
@@ -369,7 +385,7 @@ where
         crate::assert!(!bytes.is_empty() && !buffer.is_empty());
 
         // Detect Bus busy
-        if self.i2c.isr.read().busy().is_busy() {
+        if self.i2c.isr().read().busy().is_busy() {
             return Err(Error::Busy);
         }
 
@@ -378,15 +394,19 @@ where
         // Process 255 bytes at a time
         for (i, bytes) in bytes.chunks(0xFF).enumerate() {
             // Prepare to send `bytes`
-            self.i2c.cr2.modify(|_, w| {
+            self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    w.sadd()
-                        .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    unsafe {
+                        w.sadd()
+                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    }
                     w.rd_wrn().write();
                     w.start().start();
                 }
-                w.nbytes().bits(crate::unwrap!(u8::try_from(bytes.len())));
+                unsafe {
+                    w.nbytes().bits(crate::unwrap!(u8::try_from(bytes.len())));
+                }
                 if i == end {
                     w.reload().completed().autoend().software()
                 } else {
@@ -401,7 +421,9 @@ where
 
                 // Put byte on the wire
                 // NOTE(write): Writes all non-reserved bits.
-                self.i2c.txdr.write(|w| w.txdata().bits(*byte));
+                unsafe {
+                    self.i2c.txdr().write(|w| w.txdata().bits(*byte));
+                }
             }
 
             if i != end {
@@ -420,15 +442,19 @@ where
         // Process 255 bytes at a time
         for (i, buffer) in buffer.chunks_mut(0xFF).enumerate() {
             // Prepare to receive `bytes`
-            self.i2c.cr2.modify(|_, w| {
+            self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    w.sadd()
-                        .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    unsafe {
+                        w.sadd()
+                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    }
                     w.rd_wrn().read();
                     w.start().start();
                 }
-                w.nbytes().bits(crate::unwrap!(u8::try_from(buffer.len())));
+                unsafe {
+                    w.nbytes().bits(crate::unwrap!(u8::try_from(buffer.len())));
+                }
                 if i == end {
                     w.reload().completed().autoend().automatic()
                 } else {
@@ -440,7 +466,7 @@ where
                 // Wait until we have received something
                 busy_wait!(self.i2c, rxne, is_not_empty);
 
-                *byte = self.i2c.rxdr.read().rxdata().bits();
+                *byte = self.i2c.rxdr().read().rxdata().bits();
             }
 
             if i != end {
@@ -453,7 +479,7 @@ where
         // Wait until the last transmission is finished
         busy_wait!(self.i2c, stopf, is_stop);
 
-        self.i2c.icr.write(|w| w.stopcf().clear());
+        self.i2c.icr().write(|w| w.stopcf().clear());
 
         Ok(())
     }
@@ -473,9 +499,9 @@ macro_rules! i2c {
             impl Instance for $I2CX {
                 fn clock(clocks: &Clocks) -> Hertz {
                     // SAFETY: atomic read of valid pointer with no side effects
-                    match unsafe { (*RCC::ptr()).cfgr3.read().$i2cXsw().variant() } {
-                        I2C1SW_A::Hsi => crate::rcc::HSI,
-                        I2C1SW_A::Sysclk => clocks.sysclk(),
+                    match unsafe { (*RCC::ptr()).cfgr3().read().$i2cXsw().variant() } {
+                        I2C1SW::Hsi => crate::rcc::HSI,
+                        I2C1SW::Sysclk => clocks.sysclk(),
                     }
                 }
             }
