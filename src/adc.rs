@@ -1472,7 +1472,7 @@ macro_rules! adc_common {
                 }
 
                 fn clock(&self, clocks: &Clocks) -> Option<Hertz> {
-                    use crate::pac::rcc::cfgr2::ADC12PRES;
+                    use crate::pac::rcc::cfgr2::ADC1PRES;
                     use crate::pac::RCC;
                     // SAFETY: atomic read with no side effects
                     let adc_pres = unsafe { &(*RCC::ptr()).cfgr2().read().$adcXYpres() };
@@ -1485,19 +1485,19 @@ macro_rules! adc_common {
                         Some(pllclk) if !adc_pres.is_no_clock()  => {
                             pllclk
                                 / match adc_pres.variant() {
-                                    Some(ADC12PRES::Div1) => 1,
-                                    Some(ADC12PRES::Div2) => 2,
-                                    Some(ADC12PRES::Div4) => 4,
-                                    Some(ADC12PRES::Div6) => 6,
-                                    Some(ADC12PRES::Div8) => 8,
-                                    Some(ADC12PRES::Div10) => 10,
-                                    Some(ADC12PRES::Div12) => 12,
-                                    Some(ADC12PRES::Div16) => 16,
-                                    Some(ADC12PRES::Div32) => 32,
-                                    Some(ADC12PRES::Div64) => 64,
-                                    Some(ADC12PRES::Div128) => 128,
-                                    Some(ADC12PRES::Div256) => 256,
-                                    Some(ADC12PRES::NoClock) | None => 1,
+                                    Some(ADC1PRES::Div1) => 1,
+                                    Some(ADC1PRES::Div2) => 2,
+                                    Some(ADC1PRES::Div4) => 4,
+                                    Some(ADC1PRES::Div6) => 6,
+                                    Some(ADC1PRES::Div8) => 8,
+                                    Some(ADC1PRES::Div10) => 10,
+                                    Some(ADC1PRES::Div12) => 12,
+                                    Some(ADC1PRES::Div16) => 16,
+                                    Some(ADC1PRES::Div32) => 32,
+                                    Some(ADC1PRES::Div64) => 64,
+                                    Some(ADC1PRES::Div128) => 128,
+                                    Some(ADC1PRES::Div256) => 256,
+                                    Some(ADC1PRES::NoClock) | None => 1,
                                 }
                         }
                         _ => {
