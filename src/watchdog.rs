@@ -127,7 +127,13 @@ impl IndependentWatchDog {
         // If the prescaler was changed wait until the change procedure is finished.
         while self.iwdg.sr().read().pvu().bit() {}
 
-        let psc = self.iwdg.pr().read().pr().variant().unwrap(); // <--- Unwrap!!
+        let psc = self
+            .iwdg
+            .pr()
+            .read()
+            .pr()
+            .variant()
+            .unwrap_or(PR::DivideBy256);
         let reload = self.iwdg.rlr().read().rl().bits();
 
         Milliseconds((into_division_value(psc) * u32::from(reload)) / LSI.integer())
