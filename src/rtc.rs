@@ -64,12 +64,10 @@ impl Rtc {
         enable(bdcr);
         result.set_24h_fmt();
 
-        unsafe {
-            result.rtc.prer().modify(|_, w| {
-                w.prediv_s().bits(prediv_s);
-                w.prediv_a().bits(prediv_a)
-            });
-        }
+        result.rtc.prer().modify(|_, w| {
+            w.prediv_s().set(prediv_s);
+            w.prediv_a().set(prediv_a)
+        });
 
         result
     }
@@ -117,10 +115,8 @@ impl Rtc {
         F: FnMut(&mut RTC),
     {
         // Disable write protection
-        unsafe {
-            self.rtc.wpr().write(|w| w.key().bits(0xCA));
-            self.rtc.wpr().write(|w| w.key().bits(0x53));
-        }
+        self.rtc.wpr().write(|w| w.key().set(0xCA));
+        self.rtc.wpr().write(|w| w.key().set(0x53));
         // Enter init mode
         let isr = self.rtc.isr().read();
         if isr.initf().bit_is_clear() {
@@ -151,26 +147,24 @@ impl DateTimeAccess for Rtc {
         let (minutes_tens, minutes_units) = bcd2_encode(date.minute())?;
         let (second_tens, second_units) = bcd2_encode(date.second())?;
 
-        unsafe {
-            self.rtc.dr().write(|w| {
-                w.dt().bits(day_tens);
-                w.du().bits(day_units);
-                w.mt().bit(month_tens > 0);
-                w.mu().bits(month_units);
-                w.yt().bits(year_tens);
-                w.yu().bits(year_units)
-            });
+        self.rtc.dr().write(|w| {
+            w.dt().set(day_tens);
+            w.du().set(day_units);
+            w.mt().bit(month_tens > 0);
+            w.mu().set(month_units);
+            w.yt().set(year_tens);
+            w.yu().set(year_units)
+        });
 
-            self.rtc.tr().write(|w| {
-                w.ht().bits(hour_tens);
-                w.hu().bits(hour_units);
-                w.mnt().bits(minutes_tens);
-                w.mnu().bits(minutes_units);
-                w.st().bits(second_tens);
-                w.su().bits(second_units);
-                w.pm().clear_bit()
-            });
-        }
+        self.rtc.tr().write(|w| {
+            w.ht().set(hour_tens);
+            w.hu().set(hour_units);
+            w.mnt().set(minutes_tens);
+            w.mnu().set(minutes_units);
+            w.st().set(second_tens);
+            w.su().set(second_units);
+            w.pm().clear_bit()
+        });
 
         Ok(())
     }
@@ -203,17 +197,15 @@ impl Rtcc for Rtc {
         let (minutes_tens, minutes_units) = bcd2_encode(time.minute())?;
         let (seconds_tens, seconds_units) = bcd2_encode(time.second())?;
 
-        unsafe {
-            self.rtc.tr().write(|w| {
-                w.ht().bits(hour_tens);
-                w.hu().bits(hour_units);
-                w.mnt().bits(minutes_tens);
-                w.mnu().bits(minutes_units);
-                w.st().bits(seconds_tens);
-                w.su().bits(seconds_units);
-                w.pm().clear_bit()
-            });
-        }
+        self.rtc.tr().write(|w| {
+            w.ht().set(hour_tens);
+            w.hu().set(hour_units);
+            w.mnt().set(minutes_tens);
+            w.mnu().set(minutes_units);
+            w.st().set(seconds_tens);
+            w.su().set(seconds_units);
+            w.pm().clear_bit()
+        });
 
         Ok(())
     }
@@ -223,9 +215,9 @@ impl Rtcc for Rtc {
             return Err(Error::InvalidInputData);
         }
         let (seconds_tens, seconds_units) = bcd2_encode(u32::from(seconds))?;
-        self.modify(|rtc| unsafe {
+        self.modify(|rtc| {
             rtc.tr()
-                .modify(|_, w| w.st().bits(seconds_tens).su().bits(seconds_units));
+                .modify(|_, w| w.st().set(seconds_tens).su().set(seconds_units));
         });
 
         Ok(())
@@ -236,9 +228,9 @@ impl Rtcc for Rtc {
             return Err(Error::InvalidInputData);
         }
         let (minutes_tens, minutes_units) = bcd2_encode(u32::from(minutes))?;
-        self.modify(|rtc| unsafe {
+        self.modify(|rtc| {
             rtc.tr()
-                .modify(|_, w| w.mnt().bits(minutes_tens).mnu().bits(minutes_units));
+                .modify(|_, w| w.mnt().set(minutes_tens).mnu().set(minutes_units));
         });
 
         Ok(())
@@ -251,11 +243,9 @@ impl Rtcc for Rtc {
             Hours::AM(_) | Hours::PM(_) => self.set_12h_fmt(),
         }
 
-        unsafe {
-            self.rtc
-                .tr()
-                .modify(|_, w| w.ht().bits(hour_tens).hu().bits(hour_units));
-        }
+        self.rtc
+            .tr()
+            .modify(|_, w| w.ht().set(hour_tens).hu().set(hour_units));
 
         Ok(())
     }
@@ -277,9 +267,9 @@ impl Rtcc for Rtc {
             return Err(Error::InvalidInputData);
         }
         let (day_tens, day_units) = bcd2_encode(u32::from(day))?;
-        self.modify(|rtc| unsafe {
+        self.modify(|rtc| {
             rtc.dr()
-                .modify(|_, w| w.dt().bits(day_tens).du().bits(day_units));
+                .modify(|_, w| w.dt().set(day_tens).du().set(day_units));
         });
 
         Ok(())
@@ -290,9 +280,9 @@ impl Rtcc for Rtc {
             return Err(Error::InvalidInputData);
         }
         let (month_tens, month_units) = bcd2_encode(u32::from(month))?;
-        self.modify(|rtc| unsafe {
+        self.modify(|rtc| {
             rtc.dr()
-                .modify(|_, w| w.mt().bit(month_tens > 0).mu().bits(month_units));
+                .modify(|_, w| w.mt().bit(month_tens > 0).mu().set(month_units));
         });
 
         Ok(())
@@ -304,8 +294,8 @@ impl Rtcc for Rtc {
         }
         let (year_tens, yu) = bcd2_encode(u32::from(year))?;
 
-        self.modify(|rtc| unsafe {
-            rtc.dr().modify(|_, w| w.yt().bits(year_tens).yu().bits(yu));
+        self.modify(|rtc| {
+            rtc.dr().modify(|_, w| w.yt().set(year_tens).yu().set(yu));
         });
 
         Ok(())
@@ -319,13 +309,13 @@ impl Rtcc for Rtc {
         let (month_tens, month_units) = bcd2_encode(date.month())?;
         let (day_tens, day_units) = bcd2_encode(date.day())?;
 
-        self.rtc.dr().write(|w| unsafe {
-            w.dt().bits(day_tens);
-            w.du().bits(day_units);
+        self.rtc.dr().write(|w| {
+            w.dt().set(day_tens);
+            w.du().set(day_units);
             w.mt().bit(month_tens > 0);
-            w.mu().bits(month_units);
-            w.yt().bits(year_tens);
-            w.yu().bits(yu)
+            w.mu().set(month_units);
+            w.yt().set(year_tens);
+            w.yu().set(yu)
         });
 
         Ok(())

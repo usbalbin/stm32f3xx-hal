@@ -32,7 +32,7 @@ impl Dac {
             // SAFETY: Direct write to register for easier sharing between different stm32f3xx svd
             // generated API
             unsafe {
-                w.dacc1dhr().bits(data)
+                w.dacc1dhr().set(data)
             }
         });
     }

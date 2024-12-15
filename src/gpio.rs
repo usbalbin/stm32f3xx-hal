@@ -753,29 +753,36 @@ macro_rules! gpio_trait {
             impl GpioRegExt for crate::pac::$gpioy::RegisterBlock {
                 #[inline(always)]
                 fn is_low(&self, i: u8) -> bool {
-                    self.idr().read().bits() & (1 << i) == 0
+                    self.idr().read().idr(i).is_low()
                 }
 
                 #[inline(always)]
                 fn is_set_low(&self, i: u8) -> bool {
-                    self.odr().read().bits() & (1 << i) == 0
+                    self.odr().read().odr(i).is_low()
                 }
 
                 #[inline(always)]
                 fn set_high(&self, i: u8) {
                     // SAFETY: atomic write to a stateless register
-                    unsafe { self.bsrr().write(|w| w.bits(1 << i)) };
+                    self.bsrr().write(|w| w.bs(i).set_bit());
                 }
 
                 #[inline(always)]
                 fn set_low(&self, i: u8) {
                     // SAFETY: atomic write to a stateless register
-                    unsafe { self.bsrr().write(|w| w.bits(1 << (16 + i))) };
+                    self.bsrr().write(|w| w.br(i).set_bit());
                 }
             }
         )+
     };
 }
+
+fn foo(x: crate::pac::gpioa::RegisterBlock, n: u8) {
+    x.bsrr().write(|w| w.br(n).set_bit());
+    x.odr().read().odr(n).is_low();
+    
+}
+
 
 /// Implement `private::{Moder, Ospeedr, Otyper, Pupdr}` traits for each opaque register structs
 macro_rules! r_trait {

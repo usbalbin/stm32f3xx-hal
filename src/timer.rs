@@ -435,9 +435,7 @@ macro_rules! timer {
             #[inline]
             fn set_psc(&mut self, psc: u16) {
                 // NOTE(write): uses all bits in this register.
-                unsafe {
-                    self.psc().write(|w| w.psc().bits(psc));
-                }
+                self.psc().write(|w| w.psc().set(psc));
             }
 
             #[inline]

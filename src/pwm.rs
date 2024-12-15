@@ -317,9 +317,7 @@ macro_rules! pwm_timer_private {
             let clock_freq = clocks.$pclkz().0 * if clocks.ppre1() == 1 { 1 } else { 2 };
             let prescale_factor = clock_freq / res as u32 / freq.integer();
             // NOTE(write): uses all bits of this register.
-            unsafe {
-                tim.psc().write(|w| w.psc().bits(prescale_factor as u16 - 1));
-            }
+            tim.psc().write(|w| w.psc().set(prescale_factor as u16 - 1));
 
             // Make the settings reload immediately
             // NOTE(write): write to a state-less register.

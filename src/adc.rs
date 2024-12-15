@@ -937,11 +937,9 @@ where
         });
 
         if let config::ConversionMode::Discontinuous(n) = conversion_mode {
-            unsafe {
-                self.reg
-                    .cfgr()
-                    .modify(|_, w| w.discnum().bits(if n < 0b111 { n } else { 0b111 }));
-            }
+            self.reg
+                .cfgr()
+                .modify(|_, w| w.discnum().set(if n < 0b111 { n } else { 0b111 }));
         }
     }
 
@@ -1101,9 +1099,7 @@ where
     /// the end of a single conversion of a "slot" is notfied via [`Event::EndOfConversion`].
     #[inline]
     pub fn set_sequence_length(&mut self, sequence: config::Sequence) {
-        unsafe {
-            self.reg.sqr1().modify(|_, w| w.l().bits(sequence.into()));
-        }
+        self.reg.sqr1().modify(|_, w| w.l().set(sequence.into()));
     }
 
     // TODO(Sh3Rm4n): Implement, when injection mode is implemented.

@@ -100,7 +100,7 @@ impl IndependentWatchDog {
         self.access_registers(|iwdg| unsafe {
             iwdg.pr().modify(|_, w| w.pr().bits(psc));
             #[allow(clippy::cast_possible_truncation)]
-            iwdg.rlr().modify(|_, w| w.rl().bits(reload as u16));
+            iwdg.rlr().modify(|_, w| w.rl().set(reload as u16));
         });
 
         // NOTE: As the watchdog can not be stopped once started,

@@ -190,20 +190,18 @@ impl<I2C, SCL, SDA> I2c<I2C, (SCL, SDA)> {
 
         // Configure for "fast mode" (400 KHz)
         // NOTE(write): writes all non-reserved bits.
-        unsafe {
-            i2c.timingr().write(|w| {
-                w.presc()
-                    .bits(crate::unwrap!(u8::try_from(presc)))
-                    .sdadel()
-                    .bits(crate::unwrap!(u8::try_from(sdadel)))
-                    .scldel()
-                    .bits(crate::unwrap!(u8::try_from(scldel)))
-                    .scll()
-                    .bits(scl_low)
-                    .sclh()
-                    .bits(scl_high)
-            });
-        }
+        i2c.timingr().write(|w| {
+            w.presc()
+                .set(crate::unwrap!(u8::try_from(presc)))
+                .sdadel()
+                .set(crate::unwrap!(u8::try_from(sdadel)))
+                .scldel()
+                .set(crate::unwrap!(u8::try_from(scldel)))
+                .scll()
+                .set(scl_low)
+                .sclh()
+                .set(scl_high)
+        });
 
         // Enable the peripheral
         i2c.cr1().modify(|_, w| w.pe().set_bit());
@@ -252,16 +250,11 @@ where
             self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    unsafe {
-                        w.sadd()
-                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
-                    }
+                    w.sadd().set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                     w.rd_wrn().read();
                     w.start().start();
                 }
-                unsafe {
-                    w.nbytes().bits(crate::unwrap!(u8::try_from(buffer.len())));
-                }
+                w.nbytes().set(crate::unwrap!(u8::try_from(buffer.len())));
                 if i == end {
                     w.reload().completed().autoend().automatic()
                 } else {
@@ -308,14 +301,9 @@ where
             // 0 byte write
             self.i2c.cr2().modify(|_, w| {
                 w.add10().bit7();
-                unsafe {
-                    w.sadd()
-                        .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
-                }
+                w.sadd().set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                 w.rd_wrn().write();
-                unsafe {
-                    w.nbytes().bits(0);
-                }
+                w.nbytes().set(0);
                 w.reload().completed();
                 w.autoend().automatic();
                 w.start().start()
@@ -329,16 +317,11 @@ where
                 self.i2c.cr2().modify(|_, w| {
                     if i == 0 {
                         w.add10().bit7();
-                        unsafe {
-                            w.sadd()
-                                .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
-                        }
+                        w.sadd().set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                         w.rd_wrn().write();
                         w.start().start();
                     }
-                    unsafe {
-                        w.nbytes().bits(crate::unwrap!(u8::try_from(bytes.len())));
-                    }
+                    w.nbytes().set(crate::unwrap!(u8::try_from(bytes.len())));
                     if i == end {
                         w.reload().completed().autoend().automatic()
                     } else {
@@ -353,9 +336,7 @@ where
 
                     // Put byte on the wire
                     // NOTE(write): Writes all non-reserved bits.
-                    unsafe {
-                        self.i2c.txdr().write(|w| w.txdata().bits(*byte));
-                    }
+                    self.i2c.txdr().write(|w| w.txdata().set(*byte));
                 }
 
                 if i != end {
@@ -397,16 +378,12 @@ where
             self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    unsafe {
-                        w.sadd()
-                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
-                    }
+                    w.sadd()
+                        .set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                     w.rd_wrn().write();
                     w.start().start();
                 }
-                unsafe {
-                    w.nbytes().bits(crate::unwrap!(u8::try_from(bytes.len())));
-                }
+                w.nbytes().set(crate::unwrap!(u8::try_from(bytes.len())));
                 if i == end {
                     w.reload().completed().autoend().software()
                 } else {
@@ -421,9 +398,7 @@ where
 
                 // Put byte on the wire
                 // NOTE(write): Writes all non-reserved bits.
-                unsafe {
-                    self.i2c.txdr().write(|w| w.txdata().bits(*byte));
-                }
+                self.i2c.txdr().write(|w| w.txdata().set(*byte));
             }
 
             if i != end {
@@ -445,16 +420,12 @@ where
             self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    unsafe {
-                        w.sadd()
-                            .bits(u16::from(crate::unwrap!(addr.checked_shl(1))));
-                    }
+                    w.sadd()
+                        .set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                     w.rd_wrn().read();
                     w.start().start();
                 }
-                unsafe {
-                    w.nbytes().bits(crate::unwrap!(u8::try_from(buffer.len())));
-                }
+                w.nbytes().set(crate::unwrap!(u8::try_from(buffer.len())));
                 if i == end {
                     w.reload().completed().autoend().automatic()
                 } else {

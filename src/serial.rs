@@ -366,7 +366,7 @@ where
         let brr = Usart::clock(&clocks).integer() / config.baudrate.integer();
         crate::assert!(brr >= 16, "impossible baud rate");
         usart.brr().write(|w| unsafe {
-            w.brr().bits(
+            w.brr().set(
                 // SAFETY: safe because of assert before
                 u16::try_from(brr).unwrap_unchecked(),
             )
@@ -677,9 +677,7 @@ where
         // USART is disabled
         let enabled = self.usart.cr1().read().ue().bit_is_set();
         self.usart.cr1().modify(|_, w| w.ue().disabled());
-        unsafe {
-            self.usart.cr2().modify(|_, w| w.add().bits(char));
-        }
+        self.usart.cr2().modify(|_, w| w.add().set(char));
         self.usart.cr1().modify(|_, w| w.ue().bit(enabled));
     }
 
@@ -712,9 +710,7 @@ where
     pub fn set_receiver_timeout(&mut self, value: Option<u32>) {
         if let Some(value) = value {
             self.usart.cr2().modify(|_, w| w.rtoen().enabled());
-            unsafe {
-                self.usart.rtor().modify(|_, w| w.rto().bits(value));
-            }
+            self.usart.rtor().modify(|_, w| w.rto().set(value));
         } else {
             self.usart.cr2().modify(|_, w| w.rtoen().disabled());
         }
@@ -838,9 +834,7 @@ where
 
     fn write(&mut self, byte: u8) -> nb::Result<(), Infallible> {
         if self.usart.isr().read().txe().bit_is_set() {
-            unsafe {
-                self.usart.tdr().write(|w| w.tdr().bits(u16::from(byte)));
-            }
+            self.usart.tdr().write(|w| w.tdr().set(u16::from(byte)));
             Ok(())
         } else {
             Err(nb::Error::WouldBlock)
