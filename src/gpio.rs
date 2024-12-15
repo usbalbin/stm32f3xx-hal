@@ -556,7 +556,7 @@ where
 #[cfg(feature = "svd-f373")]
 macro_rules! reg_for_cpu {
     ($exti:expr, $xr:ident) => {
-        $exti.$xr
+        $exti.$xr()
     };
 }
 
