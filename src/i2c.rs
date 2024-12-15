@@ -378,8 +378,7 @@ where
             self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    w.sadd()
-                        .set(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    w.sadd().set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                     w.rd_wrn().write();
                     w.start().start();
                 }
@@ -420,8 +419,7 @@ where
             self.i2c.cr2().modify(|_, w| {
                 if i == 0 {
                     w.add10().bit7();
-                    w.sadd()
-                        .set(u16::from(crate::unwrap!(addr.checked_shl(1))));
+                    w.sadd().set(u16::from(crate::unwrap!(addr.checked_shl(1))));
                     w.rd_wrn().read();
                     w.start().start();
                 }

@@ -780,9 +780,7 @@ macro_rules! gpio_trait {
 fn foo(x: crate::pac::gpioa::RegisterBlock, n: u8) {
     x.bsrr().write(|w| w.br(n).set_bit());
     x.odr().read().odr(n).is_low();
-    
 }
-
 
 /// Implement `private::{Moder, Ospeedr, Otyper, Pupdr}` traits for each opaque register structs
 macro_rules! r_trait {
