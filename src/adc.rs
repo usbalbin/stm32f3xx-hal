@@ -689,23 +689,12 @@ where
     #[rustfmt::skip]
     pub fn channel_sequence(&self, sequence: config::Sequence) ->  Option<channel::Id> {
         // Set the channel in the right sequence field
-        match sequence {
-            config::Sequence::One      => self.reg.sqr1().read().sq1().bits().try_into().ok(),
-            config::Sequence::Two      => self.reg.sqr1().read().sq2().bits().try_into().ok(),
-            config::Sequence::Three    => self.reg.sqr1().read().sq3().bits().try_into().ok(),
-            config::Sequence::Four     => self.reg.sqr1().read().sq4().bits().try_into().ok(),
-            config::Sequence::Five     => self.reg.sqr2().read().sq5().bits().try_into().ok(),
-            config::Sequence::Six      => self.reg.sqr2().read().sq6().bits().try_into().ok(),
-            config::Sequence::Seven    => self.reg.sqr2().read().sq7().bits().try_into().ok(),
-            config::Sequence::Eight    => self.reg.sqr2().read().sq8().bits().try_into().ok(),
-            config::Sequence::Nine     => self.reg.sqr2().read().sq9().bits().try_into().ok(),
-            config::Sequence::Ten      => self.reg.sqr3().read().sq10().bits().try_into().ok(),
-            config::Sequence::Eleven   => self.reg.sqr3().read().sq11().bits().try_into().ok(),
-            config::Sequence::Twelve   => self.reg.sqr3().read().sq12().bits().try_into().ok(),
-            config::Sequence::Thirteen => self.reg.sqr3().read().sq13().bits().try_into().ok(),
-            config::Sequence::Fourteen => self.reg.sqr3().read().sq14().bits().try_into().ok(),
-            config::Sequence::Fifteen  => self.reg.sqr4().read().sq15().bits().try_into().ok(),
-            config::Sequence::Sixteen  => self.reg.sqr4().read().sq16().bits().try_into().ok(),
+        let index = channel % 4;
+        match channel {
+            0..=3  => self.reg.sqr1().read().sq(index).bits().try_into().ok(),
+            4..=7  => self.reg.sqr2().read().sq(index).bits().try_into().ok(),
+            8..=11 => self.reg.sqr3().read().sq(index).bits().try_into().ok(),
+            12..   => self.reg.sqr4().read().sq(index).bits().try_into().ok(),
         }
     }
 
@@ -715,32 +704,11 @@ where
     where
         Pin: Channel<ADC, ID = channel::Id>,
     {
-        let channel = Pin::channel();
-        // Set the sample time for the channel
+        let channel = Pin::channel() as u8;
+        let index = channel % 10;
         match channel {
-            #[cfg(feature = "gpio-f373")]
-            channel::Id::Zero => self.adc.smpr1().read().smp0().variant().into(),
-            channel::Id::One => self.reg.smpr1().read().smp1().variant().into(),
-            channel::Id::Two => self.reg.smpr1().read().smp2().variant().into(),
-            channel::Id::Three => self.reg.smpr1().read().smp3().variant().into(),
-            channel::Id::Four => self.reg.smpr1().read().smp4().variant().into(),
-            channel::Id::Five => self.reg.smpr1().read().smp5().variant().into(),
-            channel::Id::Six => self.reg.smpr1().read().smp6().variant().into(),
-            channel::Id::Seven => self.reg.smpr1().read().smp7().variant().into(),
-            channel::Id::Eight => self.reg.smpr1().read().smp8().variant().into(),
-            channel::Id::Nine => self.reg.smpr1().read().smp9().variant().into(),
-            channel::Id::Ten => self.reg.smpr2().read().smp10().variant().into(),
-            channel::Id::Eleven => self.reg.smpr2().read().smp11().variant().into(),
-            channel::Id::Twelve => self.reg.smpr2().read().smp12().variant().into(),
-            channel::Id::Thirteen => self.reg.smpr2().read().smp13().variant().into(),
-            channel::Id::Fourteen => self.reg.smpr2().read().smp14().variant().into(),
-            channel::Id::Fifteen => self.reg.smpr2().read().smp15().variant().into(),
-            channel::Id::Sixteen => self.reg.smpr2().read().smp16().variant().into(),
-            channel::Id::Seventeen => self.reg.smpr2().read().smp17().variant().into(),
-            channel::Id::Eighteen => self.reg.smpr2().read().smp18().variant().into(),
-            // #[cfg(not(feature = "gpio-f373"))]
-            // // SAFETY: We know, that channel IDs will not exceed 18, see [`crate::adc::channel`]
-            // _ => unsafe { unreachable_unchecked() },
+            0..=9 => self.reg.smpr1().read().smp(index).variant().into(),
+            10.. => self.reg.smpr2().read().smp(index).variant().into(),
         }
     }
 
@@ -1031,23 +999,12 @@ where
         // Set the channel in the right sequence field
         // SAFETY: the channel.into() implementation ensures that those are valid values
         unsafe {
-            match sequence {
-                config::Sequence::One      => self.reg.sqr1().modify(|_, w| w.sq1().bits(channel.into())),
-                config::Sequence::Two      => self.reg.sqr1().modify(|_, w| w.sq2().bits(channel.into())),
-                config::Sequence::Three    => self.reg.sqr1().modify(|_, w| w.sq3().bits(channel.into())),
-                config::Sequence::Four     => self.reg.sqr1().modify(|_, w| w.sq4().bits(channel.into())),
-                config::Sequence::Five     => self.reg.sqr2().modify(|_, w| w.sq5().bits(channel.into())),
-                config::Sequence::Six      => self.reg.sqr2().modify(|_, w| w.sq6().bits(channel.into())),
-                config::Sequence::Seven    => self.reg.sqr2().modify(|_, w| w.sq7().bits(channel.into())),
-                config::Sequence::Eight    => self.reg.sqr2().modify(|_, w| w.sq8().bits(channel.into())),
-                config::Sequence::Nine     => self.reg.sqr2().modify(|_, w| w.sq9().bits(channel.into())),
-                config::Sequence::Ten      => self.reg.sqr3().modify(|_, w| w.sq10().bits(channel.into())),
-                config::Sequence::Eleven   => self.reg.sqr3().modify(|_, w| w.sq11().bits(channel.into())),
-                config::Sequence::Twelve   => self.reg.sqr3().modify(|_, w| w.sq12().bits(channel.into())),
-                config::Sequence::Thirteen => self.reg.sqr3().modify(|_, w| w.sq13().bits(channel.into())),
-                config::Sequence::Fourteen => self.reg.sqr3().modify(|_, w| w.sq14().bits(channel.into())),
-                config::Sequence::Fifteen  => self.reg.sqr4().modify(|_, w| w.sq15().bits(channel.into())),
-                config::Sequence::Sixteen  => self.reg.sqr4().modify(|_, w| w.sq16().bits(channel.into())),
+            let index = channel % 4;
+            match channel {
+                0..=3  => self.reg.sqr1().modify(|_, w| w.sq(index).set(channel.into())),
+                4..=7  => self.reg.sqr2().modify(|_, w| w.sq(index).set(channel.into())),
+                8..=11 => self.reg.sqr3().modify(|_, w| w.sq(index).set(channel.into())),
+                12..   => self.reg.sqr4().modify(|_, w| w.sq(index).set(channel.into())),
             };
         }
     }
@@ -1066,30 +1023,12 @@ where
         Pin: Channel<ADC, ID = channel::Id>,
     {
         let channel = Pin::channel();
+
+        let index = channel % 10;
         // Set the sample time for the channel
         match channel {
-            #[cfg(feature = "gpio-f373")]
-            channel::Id::Zero     => self.adc.smpr1().modify(|_, w| w.smp0().variant(sample_time.into())),
-            channel::Id::One      => self.reg.smpr1().modify(|_, w| w.smp1().variant(sample_time.into())),
-            channel::Id::Two      => self.reg.smpr1().modify(|_, w| w.smp2().variant(sample_time.into())),
-            channel::Id::Three    => self.reg.smpr1().modify(|_, w| w.smp3().variant(sample_time.into())),
-            channel::Id::Four     => self.reg.smpr1().modify(|_, w| w.smp4().variant(sample_time.into())),
-            channel::Id::Five     => self.reg.smpr1().modify(|_, w| w.smp5().variant(sample_time.into())),
-            channel::Id::Six      => self.reg.smpr1().modify(|_, w| w.smp6().variant(sample_time.into())),
-            channel::Id::Seven    => self.reg.smpr1().modify(|_, w| w.smp7().variant(sample_time.into())),
-            channel::Id::Eight    => self.reg.smpr1().modify(|_, w| w.smp8().variant(sample_time.into())),
-            channel::Id::Nine     => self.reg.smpr1().modify(|_, w| w.smp9().variant(sample_time.into())),
-            channel::Id::Ten      => self.reg.smpr2().modify(|_, w| w.smp10().variant(sample_time.into())),
-            channel::Id::Eleven   => self.reg.smpr2().modify(|_, w| w.smp11().variant(sample_time.into())),
-            channel::Id::Twelve   => self.reg.smpr2().modify(|_, w| w.smp12().variant(sample_time.into())),
-            channel::Id::Thirteen => self.reg.smpr2().modify(|_, w| w.smp13().variant(sample_time.into())),
-            channel::Id::Fourteen => self.reg.smpr2().modify(|_, w| w.smp14().variant(sample_time.into())),
-            channel::Id::Fifteen  => self.reg.smpr2().modify(|_, w| w.smp15().variant(sample_time.into())),
-            channel::Id::Sixteen  => self.reg.smpr2().modify(|_, w| w.smp16().variant(sample_time.into())),
-            channel::Id::Seventeen => self.reg.smpr2().modify(|_, w| w.smp17().variant(sample_time.into())),
-            channel::Id::Eighteen => self.reg.smpr2().modify(|_, w| w.smp18().variant(sample_time.into())),
-            // #[cfg(not(feature = "gpio-f373"))]
-            // _ => () // Make it a no-op for channels which are not available.
+            0..=9  => self.reg.smpr1().modify(|_, w| w.smp(index).variant(sample_time.into())),
+            10..  => self.reg.smpr2().modify(|_, w| w.smp(index).variant(sample_time.into())),
         };
     }
 

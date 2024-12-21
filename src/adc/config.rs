@@ -54,7 +54,7 @@ use core::convert::TryFrom;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(missing_docs)]
 pub enum Sequence {
-    One,
+    One = 0,
     Two,
     Three,
     Four,
