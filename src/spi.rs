@@ -24,7 +24,6 @@ use crate::{
     rcc::{self, Clocks},
     time::rate,
 };
-use num_traits::{AsPrimitive, PrimInt};
 
 /// SPI error
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -331,6 +330,34 @@ where
     }
 }
 
+/// A trait for types that can be used as SPI words
+///
+/// This is typically [u8] and [u16]
+pub trait SpiWord {
+    /// Read word from SPI data register
+    fn read(r: &impl Instance) -> Self;
+
+    /// Write word to SPI data register
+    fn write(r: &impl Instance, data: Self);
+}
+
+macro_rules! impl_spi_word {
+    ($t:ty, $dr:ident) => {
+        impl SpiWord for $t {
+            fn read(r: &impl Instance) -> Self {
+                r.$dr().read().bits()
+            }
+
+            fn write(r: &impl Instance, data: Self) {
+                r.$dr().write(|w| w.dr().set(data));
+            }
+        }
+    };
+}
+
+impl_spi_word!(u16, dr);
+impl_spi_word!(u8, dr8);
+
 impl<SPI, Sck, Miso, Mosi, Word> FullDuplex<Word> for Spi<SPI, (Sck, Miso, Mosi), Word>
 where
     SPI: Instance,
@@ -338,8 +365,7 @@ where
     // SckPin could technically be omitted, though not advisable.
     Miso: MisoPin<SPI>,
     Mosi: MosiPin<SPI>,
-    Word: PrimInt + Into<u32> + 'static,
-    u32: AsPrimitive<Word>,
+    Word: SpiWord,
 {
     type Error = Error;
 
@@ -353,9 +379,8 @@ where
         } else if sr.crcerr().is_no_match() {
             nb::Error::Other(Error::Crc)
         } else if sr.rxne().is_not_empty() {
-            let read_ptr = self.spi.dr().as_ptr() as *const Word;
             // SAFETY: Read from register owned by this Spi struct
-            let value = unsafe { core::ptr::read_volatile(read_ptr) };
+            let value = SpiWord::read(&self.spi);
             return Ok(value);
         } else {
             nb::Error::WouldBlock
@@ -372,9 +397,8 @@ where
         } else if sr.crcerr().is_no_match() {
             nb::Error::Other(Error::Crc)
         } else if sr.txe().is_empty() {
-            let write_ptr = self.spi.dr().as_ptr() as *mut Word;
             // SAFETY: Write to register owned by this Spi struct
-            unsafe { core::ptr::write_volatile(write_ptr, word) };
+            SpiWord::write(&self.spi, word);
             return Ok(());
         } else {
             nb::Error::WouldBlock
@@ -387,8 +411,7 @@ where
     SPI: Instance,
     Miso: MisoPin<SPI>,
     Mosi: MosiPin<SPI>,
-    Word: PrimInt + Into<u32> + 'static,
-    u32: AsPrimitive<Word>,
+    Word: SpiWord,
 {
 }
 
@@ -397,8 +420,7 @@ where
     SPI: Instance,
     Miso: MisoPin<SPI>,
     Mosi: MosiPin<SPI>,
-    Word: PrimInt + Into<u32> + 'static,
-    u32: AsPrimitive<Word>,
+    Word: SpiWord,
 {
 }
 
