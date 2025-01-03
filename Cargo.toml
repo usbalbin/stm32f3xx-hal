@@ -59,7 +59,6 @@ rtt-target = { version = "0.4.0" }
 systick-monotonic = "1.0"
 usb-device = "0.3.1"
 usbd-serial = "0.2.0"
-stm32f3 = { version = "0.16.0", package = "stm32f3-staging" }
 
 [build-dependencies]
 slice-group-by = "0.3.1"
