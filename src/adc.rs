@@ -498,9 +498,9 @@ where
 
         self.reg
             .cr()
-            .modify(|_, w| w.adcaldif().single_ended().adcal().calibration());
+            .modify(|_, w| w.adcaldif().single_ended().adcal().start_calibration());
 
-        while self.reg.cr().read().adcal().is_calibration() {}
+        while self.reg.cr().read().adcal().is_calibrating() {}
 
         // ADEN bit cannot be set during ADCAL=1 and 4 ADC clock cycle after the ADCAL bit is
         // cleared by hardware
@@ -689,8 +689,8 @@ where
     #[rustfmt::skip]
     pub fn channel_sequence(&self, sequence: config::Sequence) ->  Option<channel::Id> {
         // Set the channel in the right sequence field
-        let index = channel % 4;
-        match channel {
+        let index = sequence as u8 % 4;
+        match sequence as u8 {
             0..=3  => self.reg.sqr1().read().sq(index).bits().try_into().ok(),
             4..=7  => self.reg.sqr2().read().sq(index).bits().try_into().ok(),
             8..=11 => self.reg.sqr3().read().sq(index).bits().try_into().ok(),
@@ -999,12 +999,12 @@ where
         // Set the channel in the right sequence field
         // SAFETY: the channel.into() implementation ensures that those are valid values
         unsafe {
-            let index = channel % 4;
-            match channel {
-                0..=3  => self.reg.sqr1().modify(|_, w| w.sq(index).set(channel.into())),
-                4..=7  => self.reg.sqr2().modify(|_, w| w.sq(index).set(channel.into())),
-                8..=11 => self.reg.sqr3().modify(|_, w| w.sq(index).set(channel.into())),
-                12..   => self.reg.sqr4().modify(|_, w| w.sq(index).set(channel.into())),
+            let index = sequence as u8 % 4;
+            match sequence as u8 {
+                0..=3  => self.reg.sqr1().modify(|_, w| w.sq(index).bits(channel.into())),
+                4..=7  => self.reg.sqr2().modify(|_, w| w.sq(index).bits(channel.into())),
+                8..=11 => self.reg.sqr3().modify(|_, w| w.sq(index).bits(channel.into())),
+                12..   => self.reg.sqr4().modify(|_, w| w.sq(index).bits(channel.into())),
             };
         }
     }
@@ -1022,7 +1022,7 @@ where
     where
         Pin: Channel<ADC, ID = channel::Id>,
     {
-        let channel = Pin::channel();
+        let channel = Pin::channel() as u8;
 
         let index = channel % 10;
         // Set the sample time for the channel
